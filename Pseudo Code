@@ -1,0 +1,19 @@
+START
+
+Go forward until wall reached
+
+while robot_position==new
+	Follow wall on right
+end
+
+while in_time
+	calculate center of gravity C0
+	find less explored angle range R0 (range to tweak 45deg ?)
+	goal= random point in R0 in a given range from C0
+	
+	while robot_position==new and robot_position~=goal
+	Bug Algorithm
+	end
+end
+
+END
