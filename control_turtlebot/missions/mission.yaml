@@ -1,0 +1,7 @@
+trajectory/north: [8.7958369e-07, 8.7958369e-07, -1.0000000, -1.0000000]
+trajectory/east: [5.8188791e-07, 5.8188791e-07, -1.0000000, -1.0000000]
+trajectory/z: [0.0, 0.25000000, 0.25000000, 0.0]
+trajectory/altitude_mode: [False, False, False, False]
+trajectory/mode: 'los_cte'
+trajectory/time_out: 10
+trajectory/wait: [0.0, 0.0, 0.0, 0.0]
