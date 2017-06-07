@@ -63,6 +63,7 @@ add_service_files(
   FILES
   GotoWaypoint.srv
   FindPathToGoal.srv
+  GeneratePoint.srv
 )
 
 ## Generate actions in the 'action' folder

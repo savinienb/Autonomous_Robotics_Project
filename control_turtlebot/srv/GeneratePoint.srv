@@ -1,0 +1,13 @@
+## Service 
+float32 x_max
+float32 x_min
+float32 y_max
+float32 y_min
+float32 x_map_size
+float32 y_map_size
+float32 origin_x
+float32 origin_y
+---
+#geometry_msgs/Pose2D poses
+float32[] goal
+#float32 x_goal

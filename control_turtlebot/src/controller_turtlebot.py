@@ -9,7 +9,7 @@ import math
 #ROS messages
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
-from control_turtlebot.srv import GotoWaypoint,GotoWaypointRequest, GotoWaypointResponse, FindPathToGoal, FindPathToGoalResponse, FindPathToGoalRequest
+from control_turtlebot.srv import *
 from std_msgs.msg import *
 from sensor_msgs.msg import LaserScan
 from rosgraph_msgs.msg import  Clock
@@ -36,7 +36,7 @@ class Controller(object):
 		self.current_position_ = np.zeros(2)
 		self.current_orientation_ = 0.0
 		self.desired_orientation_ = 0.0
-		self.desired_position_ = [50.,0]
+		self.desired_position_ = np.zeros(2)
 
 		#displacement parameters
 		self.max_speed = [0.6,0.8]
@@ -48,25 +48,26 @@ class Controller(object):
 		self.origin_saved=False
 		self.m_line_left=False
 
-		#exploration time
-		self.duration=rospy.Duration(2)
+		self.x_map_size=50
+		self.y_map_size=50
+		self.x_max=0
+		self.y_max=0
+		self.x_min=0
+		self.y_min=0
 
-		#ompl services
-		self.serv_ = rospy.Service('/controller_turtlebot/goto', 
-                                  GotoWaypoint, 
-                                  self.go_to_start)
-		
-		rospy.wait_for_service('/controller_turtlebot/find_path_to_goal')
+		rospy.wait_for_service('generate_goal')
 		try:
-			self.find_path_to_goal_serv_ = rospy.ServiceProxy('/controller_turtlebot/find_path_to_goal', FindPathToGoal)
+			self.get_goal = rospy.ServiceProxy('generate_goal', GeneratePoint)
 		except rospy.ServiceException, e:
 			print "Service call failed: %s"%e
 		
-		#call once the service to go back
-		rospy.Timer(self.duration,self.exploration_over,oneshot=True)
+		self.get_new_goal()
 
+		#timer to stop the exploration
+		self.duration=rospy.Duration(20)
+		self.get_back()
 		return
-
+		
 	def exploration_over(self,t):
 
 		self.going_back=True
@@ -104,9 +105,13 @@ class Controller(object):
 				elif ((np.nanmin(self.ranges[194:347])<self.padding) and (self.m_line_left==False)): #if there is no wall and if we are on
 																									#on the line
 					if self.m_line_left==False:
-						self.m_line_left=True
+					   self.m_line_left=True
 						
 					self.wall_follow()
+
+				elif ((np.nanmin(self.ranges[194:347])>self.padding) and self.m_line_left==True and abs(r-self.leave_coord>0.1)): #is there any obastacle, are we on the m-lines, is it where we left it
+				# get new point
+					self.get_new_goal()
 
 				elif ( (np.nanmin(self.ranges[194:347])>self.padding) and (self.m_line_left==False or abs(r-self.leave_coord>0.1))): #is there any obastacle, are we on the m-lines, is it where we left it
 					self.go_along_line()
@@ -142,7 +147,7 @@ class Controller(object):
 
 
 	def go_along_line(self): #follow the m-lines
-		rospy.loginfo("on the line!")
+		# rospy.loginfo("on the line!")
 		angular_speed=0
 		linear_speed=0
 
@@ -240,6 +245,19 @@ class Controller(object):
 		self.current_position_[1] = odometry_msg.pose.pose.position.y
 		(r, p, y) = tf.transformations.euler_from_quaternion([odometry_msg.pose.pose.orientation.x, odometry_msg.pose.pose.orientation.y, odometry_msg.pose.pose.orientation.z, odometry_msg.pose.pose.orientation.w])
 		self.current_orientation_ = y
+
+		if self.current_position_[0]>self.x_max:
+			self.x_max=self.current_position_[0]
+		elif self.current_position_[0]<self.x_min:
+			self.x_min=self.current_position_[0]
+
+
+		if self.current_position_[1]>self.y_max:
+			self.y_max=self.current_position_[1]
+		elif self.current_position_[1]<self.y_min:
+			self.y_min=self.current_position_[1]
+
+
 		self.bug2()
 
 		return
@@ -314,6 +332,29 @@ class Controller(object):
 		
 		return GotoWaypointResponse()
 
+	def  get_new_goal(self):
+		# get new goal position for the robot
+		temp=self.get_goal(self.x_max,self.x_min,self.y_max,self.y_min,self.x_map_size,self.y_map_size,self.origin[0],self.origin[1])
+		self.desired_position_[0]=temp.goal[0]
+		self.desired_position_[1]=temp.goal[1]
+	
+	def get_back(self):
+		
+		#ompl services
+		self.serv_ = rospy.Service('/controller_turtlebot/goto', 
+                                  GotoWaypoint, 
+                                  self.go_to_start)
+		
+		rospy.wait_for_service('/controller_turtlebot/find_path_to_goal')
+		try:
+			self.find_path_to_goal_serv_ = rospy.ServiceProxy('/controller_turtlebot/find_path_to_goal', FindPathToGoal)
+		except rospy.ServiceException, e:
+			print "Service call failed: %s"%e
+		
+		#call once the service to go back
+		rospy.Timer(self.duration,self.exploration_over,oneshot=True)
+
+		
 
 
 def wrapAngle(angle):

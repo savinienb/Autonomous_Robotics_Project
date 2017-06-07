@@ -5,6 +5,7 @@
 	<arg name="enable_octomap" value="true"/>
 	<arg name="enable_controller" value="true"/>
 
+	<arg name="enable_node" value="true"/>
 	<arg name="enable_planner" value="true"/>
 
 
@@ -45,6 +46,11 @@
     		<param name="latch"            	  value="False" />
     		<!--remap from="/cloud_in" to="/camera/depth_registered/points" /--> <!-- real turtlebot -->
 		</node>
+    	</group>
+
+
+    	<group if="$(arg enable_node)">
+    		<node pkg="control_turtlebot" type="point_generator.py" name="point_generator" respawn="true" output="screen" />
     	</group>
     
     
